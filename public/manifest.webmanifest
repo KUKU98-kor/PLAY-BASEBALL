@@ -1,0 +1,11 @@
+{
+  "name": "PLAY BASEBALL",
+  "short_name": "PLAY BALL",
+  "description": "원하는 날, 원하는 포지션으로 참여하는 생활야구 소셜매치",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f7fb",
+  "theme_color": "#0b1830",
+  "lang": "ko",
+  "icons": []
+}
