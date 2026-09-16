@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Bell, Building2, CalendarDays, CheckCircle2, ChevronRight, CircleUserRound, Clock3, CreditCard, Home, MapPin, PackageCheck, Search, ShieldCheck, Trophy, Users, X } from "lucide-react";
+import { AlertTriangle, Award, Bell, Building2, CalendarDays, CheckCircle2, ChevronRight, CircleUserRound, Clock3, CreditCard, Home, MapPin, MessageSquare, PackageCheck, Search, ShieldCheck, Star, Trophy, Users, X } from "lucide-react";
 
 type Match = {
   id: number;
@@ -33,6 +33,7 @@ type Gear = { id:number; name:string; category:string; fit:string; price:number;
 type Rental = { gear:Gear; match:Match; status:"예약 완료" | "반납 완료" };
 type Venue = { id:number; region:string; name:string; address:string; field:string; fee:number; slots:{ time:string; available:boolean }[] };
 type CreatedRoom = { venue:Venue; date:string; time:string; capacity:number; paid:number };
+type ReviewPlayer = { id:number; name:string; position:string; level:string; number:number; mvp?:boolean };
 
 const catchballGroups = [
   { id: 1, city: "대전", title: "퇴근 후 가볍게 캐치볼", place: "유림공원 잔디광장", time: "오늘 19:30", level: "입문 환영", people: "2/4명" },
@@ -54,6 +55,20 @@ const venues: Venue[] = [
   { id:3, region:"세종", name:"세종 중앙야구장", address:"세종 연기면 세종리", field:"천연잔디 · 주차장", fee:140000, slots:[{time:"09:00–12:00",available:true},{time:"13:00–16:00",available:true},{time:"17:00–20:00",available:false}] },
   { id:4, region:"청주", name:"청주 생활야구장", address:"청주 흥덕구 문암동", field:"인조잔디 · 조명", fee:110000, slots:[{time:"08:00–11:00",available:false},{time:"12:00–15:00",available:true},{time:"16:00–19:00",available:true}] },
 ];
+
+const completedGame = {
+  date:"9월 14일 (일)", time:"14:00–17:00", venue:"한밭 베이스볼파크", home:"PLAY BLUE", away:"PLAY WHITE", homeScore:8, awayScore:6,
+  mvp:{ name:"박정우", position:"투수", summary:"6이닝 8K · 2타점" },
+  players:[
+    { id:1, name:"박정우", position:"투수", level:"레벨 5", number:18, mvp:true },
+    { id:2, name:"이민석", position:"포수", level:"레벨 4", number:22 },
+    { id:3, name:"최도윤", position:"3루수", level:"레벨 3", number:7 },
+    { id:4, name:"한지훈", position:"중견수", level:"레벨 4", number:51 },
+  ] satisfies ReviewPlayer[],
+};
+
+const positiveReviewTags = ["매너 플레이", "팀원을 배려해요", "시간 약속을 지켜요", "안전하게 플레이해요"];
+const cautionReviewTags = ["거친 플레이", "욕설·폭언", "과도한 항의", "안전 수칙 미준수"];
 
 export function PlayBaseballApp() {
   const [activeTab, setActiveTab] = useState<Tab>("home");
@@ -82,6 +97,10 @@ export function PlayBaseballApp() {
   const [selectedVenueId, setSelectedVenueId] = useState<number | null>(null);
   const [selectedRoomTime, setSelectedRoomTime] = useState("");
   const [createdRoom, setCreatedRoom] = useState<CreatedRoom | null>(null);
+  const [resultOpen, setResultOpen] = useState(false);
+  const [reviewPlayerId, setReviewPlayerId] = useState<number | null>(null);
+  const [reviewTags, setReviewTags] = useState<string[]>([]);
+  const [reviewedPlayerIds, setReviewedPlayerIds] = useState<number[]>([]);
 
   const filteredMatches = useMemo(
     () => region === "전체" ? matches : matches.filter((match) => match.city === region),
@@ -251,6 +270,52 @@ export function PlayBaseballApp() {
     setDemoRunning(false);
   }
 
+  async function runPostGameReviewDemo() {
+    if (demoRunning) return;
+    setShowDemoIntro(false);
+    setDemoPresentation(true);
+    setDemoRunning(true);
+    setResultOpen(false);
+    setReviewPlayerId(null);
+    setReviewTags([]);
+    setReviewedPlayerIds([]);
+    const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+    const moveAndClick = async (selector: string, action: () => void, scroll = false) => {
+      const target = document.querySelector<HTMLElement>(selector);
+      if (!target) return;
+      if (scroll) {
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        await wait(750);
+      }
+      const rect = target.getBoundingClientRect();
+      setDemoCursor({ visible: true, x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, clicking: false });
+      await wait(820);
+      setDemoCursor((current) => ({ ...current, clicking: true }));
+      await wait(220);
+      action();
+      setDemoCursor((current) => ({ ...current, clicking: false }));
+      await wait(760);
+    };
+
+    setActiveTab("home");
+    window.scrollTo({ top: 0, behavior: "auto" });
+    await wait(900);
+    await moveAndClick('[data-demo="nav-my"]', () => setActiveTab("my"));
+    await wait(500);
+    await moveAndClick('[data-demo="completed-game"]', () => setResultOpen(true), true);
+    await moveAndClick('[data-demo="review-player-3"]', () => { setReviewPlayerId(3); setReviewTags([]); }, true);
+    await moveAndClick('[data-demo="review-caution-rough"]', () => setReviewTags(["거친 플레이"]), true);
+    await moveAndClick('[data-demo="review-submit"]', () => {
+      setReviewedPlayerIds([3]);
+      setReviewPlayerId(null);
+      setReviewTags([]);
+      setToast("최도윤님의 비공개 매너 리뷰를 저장했어요.");
+    }, true);
+    await wait(2600);
+    setDemoCursor((current) => ({ ...current, visible: false }));
+    setDemoRunning(false);
+  }
+
   function reserveGear() {
     if (!selectedGear) return;
     setRentals((current) => [{ gear:selectedGear, match:matches[0], status:"예약 완료" }, ...current.filter((item) => item.gear.id !== selectedGear.id)]);
@@ -264,6 +329,25 @@ export function PlayBaseballApp() {
     setSelectedVenueId(null);
     setSelectedRoomTime("");
     setRoomBuilderOpen(true);
+  }
+
+  function openGameResult() {
+    setReviewPlayerId(null);
+    setReviewTags([]);
+    setResultOpen(true);
+  }
+
+  function toggleReviewTag(tag:string) {
+    setReviewTags((current) => current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag]);
+  }
+
+  function submitPlayerReview() {
+    if (!reviewPlayerId || reviewTags.length === 0) return;
+    const player = completedGame.players.find((item) => item.id === reviewPlayerId);
+    setReviewedPlayerIds((current) => current.includes(reviewPlayerId) ? current : [...current, reviewPlayerId]);
+    setReviewPlayerId(null);
+    setReviewTags([]);
+    setToast(`${player?.name ?? "참가자"}님의 비공개 매너 리뷰를 저장했어요.`);
   }
 
   function confirmRoomCreation() {
@@ -412,6 +496,7 @@ export function PlayBaseballApp() {
           </div>
           <section className="my-section"><div className="section-head"><div><h2 className="display">선호 포지션</h2><p>경기 신청에서 선택한 포지션이 자동 반영돼요.</p></div></div><div className="preferred-list">{preferredPositions.map((position,index) => <div key={position}><span>{index+1}지망</span><strong>{position}</strong></div>)}</div></section>
           <section className="my-section"><div className="section-head"><div><h2 className="display">다가오는 경기</h2><p>신청이 확정된 다음 일정입니다.</p></div></div><article className="upcoming-card"><div className="calendar-box"><strong>20</strong><span>SEP</span></div><div><span className="badge">대전</span><h3>9월 20일 (토) 경기</h3><p><Clock3 size={15}/>14:00–17:00 · 한밭 베이스볼파크</p></div><button className="secondary-button" onClick={() => setActiveTab("search")}>경기 보기</button></article></section>
+          <section className="my-section completed-section"><div className="section-head"><div><h2 className="display">종료된 경기</h2><p>결과와 MVP를 확인하고 함께 뛴 참가자를 리뷰하세요.</p></div><span className="result-count">REVIEW OPEN</span></div><article className="completed-game-card" data-demo="completed-game"><div className="completed-date"><strong>14</strong><span>SEP · SUN</span></div><div className="completed-main"><div><span className="badge green">경기 종료</span><h3>{completedGame.date} 경기</h3><p><MapPin size={15}/>{completedGame.venue}</p></div><div className="mini-score"><span>{completedGame.home}</span><strong>{completedGame.homeScore}<i>:</i>{completedGame.awayScore}</strong><span>{completedGame.away}</span></div><div className="mini-mvp"><Award size={20}/><span><small>GAME MVP</small><strong>{completedGame.mvp.name}</strong></span></div></div><button className="primary-button" onClick={openGameResult}>결과·리뷰 보기</button></article></section>
           <section className="my-section application-section" data-demo="applications">
             <div className="section-head"><div><h2 className="display">경기 신청 현황</h2><p>신청한 경기의 승인 상태와 희망 포지션을 확인하세요.</p></div><span className="result-count">{applications.length} APPLICATIONS</span></div>
             <div className="application-list">{applications.map(({match, positions: appliedPositions, status}) => <article className="application-card" key={match.id}>
@@ -478,6 +563,15 @@ export function PlayBaseballApp() {
 
       {selectedGear ? <div className="overlay" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setSelectedGear(null)}}><section className="sheet gear-sheet" role="dialog" aria-modal="true" aria-labelledby="gear-rental-title"><div className="sheet-head"><div><span className="badge">PLAY GEAR RESERVATION</span><h2 id="gear-rental-title">{selectedGear.name}</h2><p className="helper">{selectedGear.fit}</p></div><button className="close-button" onClick={()=>setSelectedGear(null)} aria-label="장비 예약 닫기"><X size={21}/></button></div><div className="rental-summary"><div><span>연결 경기</span><strong>9월 20일 (토) · 대전</strong><small>한밭 베이스볼파크</small></div><div><span>수령·반납</span><strong>경기장 PLAY 운영 부스</strong><small>경기 30분 전 수령 · 종료 후 20분 이내 반납</small></div><div><span>대여료</span><strong>{selectedGear.price.toLocaleString()}원</strong><small>참가비 결제 시 함께 결제</small></div></div><label className="rental-check"><input type="checkbox" defaultChecked/> 장비 상태 확인 및 현장 반납 안내를 확인했습니다.</label><button className="primary-button sheet-cta" onClick={reserveGear}>이 장비 예약하기</button></section></div>:null}
 
+      {resultOpen ? <div className="overlay result-overlay" role="presentation"><section className="sheet result-sheet" role="dialog" aria-modal="true" aria-labelledby="result-title"><div className="sheet-head"><div><span className="badge green">FINAL SCORE</span><h2 id="result-title">{completedGame.date} 경기 결과</h2><p className="helper">{completedGame.venue} · {completedGame.time}</p></div><button className="close-button" onClick={()=>setResultOpen(false)} aria-label="경기 결과 닫기"><X size={21}/></button></div>
+        <div className="final-scoreboard"><div><span>{completedGame.home}</span><strong>{completedGame.homeScore}</strong></div><b>FINAL</b><div><span>{completedGame.away}</span><strong>{completedGame.awayScore}</strong></div></div>
+        <section className="mvp-card" aria-label="경기 MVP"><div className="mvp-crown"><Award size={30}/></div><div><span>GAME MVP</span><h3>{completedGame.mvp.name} · {completedGame.mvp.position}</h3><p>{completedGame.mvp.summary}</p></div><Star size={25}/></section>
+        <div className="review-principle"><ShieldCheck size={21}/><div><strong>리뷰는 더 안전하고 매너 있는 경기를 만드는 데 사용됩니다.</strong><p>주의 평가는 다른 참가자에게 공개되지 않으며, 복수의 일치하는 평가를 운영자가 확인한 뒤 안내합니다.</p></div></div>
+        <div className="review-heading"><div><h3>함께 뛴 참가자 리뷰</h3><p>직접 경험한 행동을 기준으로 한 명씩 작성해 주세요.</p></div><span>{reviewedPlayerIds.length}/{completedGame.players.length} 완료</span></div>
+        <div className="player-review-list">{completedGame.players.map((player)=><article key={player.id} className={reviewPlayerId===player.id?"selected":""}><div className="player-number">{player.number}</div><div><strong>{player.name}{player.mvp?<em>MVP</em>:null}</strong><span>{player.position} · {player.level}</span></div>{reviewedPlayerIds.includes(player.id)?<span className="review-done"><CheckCircle2 size={16}/>작성 완료</span>:<button className="secondary-button" data-demo={player.id===3?"review-player-3":undefined} onClick={()=>{setReviewPlayerId(player.id);setReviewTags([])}}>리뷰 쓰기</button>}</article>)}</div>
+        {reviewPlayerId ? <section className="review-editor" aria-label="참가자 리뷰 작성"><div className="review-target"><MessageSquare size={19}/><span><small>리뷰 대상</small><strong>{completedGame.players.find((player)=>player.id===reviewPlayerId)?.name}</strong></span><button onClick={()=>{setReviewPlayerId(null);setReviewTags([])}}>취소</button></div><div className="review-tag-group positive"><h4>좋았던 점</h4><div>{positiveReviewTags.map((tag)=><button key={tag} className={reviewTags.includes(tag)?"selected":""} onClick={()=>toggleReviewTag(tag)} aria-pressed={reviewTags.includes(tag)}>{tag}</button>)}</div></div><div className="review-tag-group caution"><h4><AlertTriangle size={16}/>주의가 필요했던 행동</h4><p>감정이나 실력이 아닌, 실제로 확인한 행동만 선택해 주세요.</p><div>{cautionReviewTags.map((tag)=><button key={tag} data-demo={tag==="거친 플레이"?"review-caution-rough":undefined} className={reviewTags.includes(tag)?"selected":""} onClick={()=>toggleReviewTag(tag)} aria-pressed={reviewTags.includes(tag)}>{tag}</button>)}</div></div><div className="private-review-note"><ShieldCheck size={17}/>작성 내용은 운영 검토용으로만 보관되며 상대방에게 이름이 공개되지 않습니다.</div><button className="primary-button sheet-cta" data-demo="review-submit" disabled={reviewTags.length===0} onClick={submitPlayerReview}>이 리뷰 저장하기</button></section> : null}
+      </section></div> : null}
+
       {roomBuilderOpen ? <div className="overlay room-builder-overlay" role="presentation"><section className="sheet room-builder-sheet" role="dialog" aria-modal="true" aria-labelledby="room-builder-title">
         <div className="sheet-head"><div><span className="badge">HOST A MATCH</span><h2 id="room-builder-title">경기방 만들기</h2><p className="helper">구장을 먼저 확보한 뒤 참가자를 모집합니다.</p></div><button className="close-button" onClick={()=>setRoomBuilderOpen(false)} aria-label="방 만들기 닫기"><X size={21}/></button></div>
         {roomStep < 5 ? <div className="room-progress" aria-label={`방 만들기 ${roomStep}단계`}><span className={roomStep>=1?"active":""}>지역</span><i/><span className={roomStep>=2?"active":""}>구장</span><i/><span className={roomStep>=3?"active":""}>시간</span><i/><span className={roomStep>=4?"active":""}>결제</span></div> : null}
@@ -493,7 +587,7 @@ export function PlayBaseballApp() {
         {roomStep === 5 && createdRoom ? <div className="room-created"><div className="success-mark"><CheckCircle2 size={42}/></div><span className="badge green">모집방 생성 완료</span><h3>{createdRoom.date} 경기가 열렸어요!</h3><p>구장 예약이 확정됐습니다. 이제 함께 뛸 참가자를 모집할 수 있어요.</p><div className="created-ticket"><div><span>{createdRoom.venue.region}</span><strong>{createdRoom.venue.name}</strong><small>{createdRoom.date} · {createdRoom.time}</small></div><div><small>모집 현황</small><strong>0/{createdRoom.capacity}명</strong></div></div><button className="primary-button sheet-cta" data-demo="room-finish" onClick={()=>setRoomBuilderOpen(false)}>내 모집방 확인하기</button></div> : null}
       </section></div> : null}
 
-      {showDemoIntro ? <div className="demo-intro-backdrop"><section className="demo-intro" role="dialog" aria-modal="true" aria-labelledby="demo-intro-title"><button className="close-button" onClick={()=>setShowDemoIntro(false)} aria-label="시연 안내 닫기"><X size={20}/></button><div className="demo-phone-icon">▶</div><p className="section-kicker">MOBILE DEMO</p><h2 id="demo-intro-title">어떤 흐름을 시연할까요?</h2><p>Windows 녹화를 시작한 뒤 원하는 시연을 고르면 커서가 직접 이동하고 클릭합니다.</p><div className="demo-choice-stack"><button className="primary-button demo-start" data-demo="demo-start" disabled={!demoIntroReady} onClick={runRecordingDemo}><span>01</span><b>경기 참가 시연</b><small>포지션·장비 선택부터 MY 확인까지</small></button><button className="primary-button demo-start room-demo-start" data-demo="room-demo-start" disabled={!demoIntroReady} onClick={runRoomCreationDemo}><span>02</span><b>방 만들기 시연</b><small>지역·구장·시간·결제·모집방 생성까지</small></button></div><small>{demoIntroReady ? "각 시연은 약 20초 동안 자동으로 진행됩니다." : "전체 화면을 준비하고 있습니다…"}</small></section></div>:null}
+      {showDemoIntro ? <div className="demo-intro-backdrop"><section className="demo-intro" role="dialog" aria-modal="true" aria-labelledby="demo-intro-title"><button className="close-button" onClick={()=>setShowDemoIntro(false)} aria-label="시연 안내 닫기"><X size={20}/></button><div className="demo-phone-icon">▶</div><p className="section-kicker">MOBILE DEMO</p><h2 id="demo-intro-title">어떤 흐름을 시연할까요?</h2><p>Windows 녹화를 시작한 뒤 원하는 시연을 고르면 커서가 직접 이동하고 클릭합니다.</p><div className="demo-choice-stack"><button className="primary-button demo-start" data-demo="demo-start" disabled={!demoIntroReady} onClick={runRecordingDemo}><span>01</span><b>경기 참가 시연</b><small>포지션·장비 선택부터 MY 확인까지</small></button><button className="primary-button demo-start room-demo-start" data-demo="room-demo-start" disabled={!demoIntroReady} onClick={runRoomCreationDemo}><span>02</span><b>방 만들기 시연</b><small>지역·구장·시간·결제·모집방 생성까지</small></button><button className="primary-button demo-start review-demo-start" data-demo="review-demo-start" disabled={!demoIntroReady} onClick={runPostGameReviewDemo}><span>03</span><b>경기 결과·리뷰 시연</b><small>종료 경기·MVP 확인과 비공개 매너 리뷰</small></button></div><small>{demoIntroReady ? "각 시연은 약 20초 동안 자동으로 진행됩니다." : "전체 화면을 준비하고 있습니다…"}</small></section></div>:null}
 
       {demoCursor.visible ? <div className={`demo-cursor ${demoCursor.clicking ? "clicking" : ""}`} style={{ left: demoCursor.x, top: demoCursor.y }} aria-hidden="true"><span /></div> : null}
 
