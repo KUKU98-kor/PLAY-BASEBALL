@@ -68,6 +68,7 @@ export function PlayBaseballApp() {
   const [toast, setToast] = useState("");
   const [demoRunning, setDemoRunning] = useState(false);
   const [showDemoIntro, setShowDemoIntro] = useState(false);
+  const [demoIntroReady, setDemoIntroReady] = useState(false);
   const [demoPresentation, setDemoPresentation] = useState(false);
   const [demoCursor, setDemoCursor] = useState({ visible: false, x: 215, y: 466, clicking: false });
   const [selectedGear, setSelectedGear] = useState<Gear | null>(null);
@@ -130,11 +131,13 @@ export function PlayBaseballApp() {
 
   async function openDemoIntro() {
     setDemoPresentation(true);
+    setDemoIntroReady(false);
     setShowDemoIntro(true);
     window.scrollTo({ top: 0, behavior: "auto" });
     try {
       if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
     } catch {}
+    window.setTimeout(() => setDemoIntroReady(true), 650);
   }
 
   async function runRecordingDemo() {
@@ -239,8 +242,11 @@ export function PlayBaseballApp() {
       setToast("구장 결제가 완료되어 모집방이 열렸어요.");
     }, true);
     await moveAndClick('[data-demo="room-finish"]', () => setRoomBuilderOpen(false), true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    await wait(1800);
+    await moveAndClick('[data-demo="nav-home"]', () => setActiveTab("home"));
+    await wait(500);
+    const homeCreatedRoom = document.querySelector<HTMLElement>('[data-demo="home-created-room"]');
+    homeCreatedRoom?.scrollIntoView({ behavior: "smooth", block: "center" });
+    await wait(2600);
     setDemoCursor((current) => ({ ...current, visible: false }));
     setDemoRunning(false);
   }
@@ -305,6 +311,13 @@ export function PlayBaseballApp() {
             <div>{preferredPositions.map((position, index) => <b key={position}>{index + 1}지망 · {position}</b>)}</div>
           </div>
         </section>
+
+        {createdRoom ? <section className="home-created-room" data-demo="home-created-room" aria-label="내가 만든 모집방">
+          <div className="home-room-live"><span>LIVE</span><strong>모집 중</strong></div>
+          <div className="home-room-main"><span className="badge green">내가 만든 방</span><h2>{createdRoom.date} 경기</h2><p><MapPin size={15}/>{createdRoom.venue.name}</p><p><Clock3 size={15}/>{createdRoom.time}</p></div>
+          <div className="home-room-count"><span>현재 인원</span><strong>0<small>/{createdRoom.capacity}명</small></strong></div>
+          <button className="secondary-button" onClick={()=>setActiveTab("search")}>모집방 관리</button>
+        </section> : null}
 
         <nav className="filters" aria-label="지역 필터">
           {regions.map((item) => (
@@ -412,7 +425,7 @@ export function PlayBaseballApp() {
       </main>
 
       <nav className="bottom-nav five" aria-label="주요 메뉴">
-        <button className={`nav-item ${activeTab === "home" ? "active" : ""}`} onClick={() => setActiveTab("home")}><Home size={20} aria-hidden="true" />홈</button>
+        <button className={`nav-item ${activeTab === "home" ? "active" : ""}`} data-demo="nav-home" onClick={() => setActiveTab("home")}><Home size={20} aria-hidden="true" />홈</button>
         <button className={`nav-item ${activeTab === "search" ? "active" : ""}`} data-demo="nav-search" onClick={() => setActiveTab("search")}><Search size={20} aria-hidden="true" />경기 찾기</button>
         <button className={`nav-item ${activeTab === "catchball" ? "active" : ""}`} onClick={() => setActiveTab("catchball")}><Users size={20} aria-hidden="true" />캐치볼</button>
         <button className={`nav-item ${activeTab === "gear" ? "active" : ""}`} onClick={() => setActiveTab("gear")}><PackageCheck size={20} aria-hidden="true" />장비</button>
@@ -480,7 +493,7 @@ export function PlayBaseballApp() {
         {roomStep === 5 && createdRoom ? <div className="room-created"><div className="success-mark"><CheckCircle2 size={42}/></div><span className="badge green">모집방 생성 완료</span><h3>{createdRoom.date} 경기가 열렸어요!</h3><p>구장 예약이 확정됐습니다. 이제 함께 뛸 참가자를 모집할 수 있어요.</p><div className="created-ticket"><div><span>{createdRoom.venue.region}</span><strong>{createdRoom.venue.name}</strong><small>{createdRoom.date} · {createdRoom.time}</small></div><div><small>모집 현황</small><strong>0/{createdRoom.capacity}명</strong></div></div><button className="primary-button sheet-cta" data-demo="room-finish" onClick={()=>setRoomBuilderOpen(false)}>내 모집방 확인하기</button></div> : null}
       </section></div> : null}
 
-      {showDemoIntro ? <div className="demo-intro-backdrop"><section className="demo-intro" role="dialog" aria-modal="true" aria-labelledby="demo-intro-title"><button className="close-button" onClick={()=>setShowDemoIntro(false)} aria-label="시연 안내 닫기"><X size={20}/></button><div className="demo-phone-icon">▶</div><p className="section-kicker">MOBILE DEMO</p><h2 id="demo-intro-title">어떤 흐름을 시연할까요?</h2><p>Windows 녹화를 시작한 뒤 원하는 시연을 고르면 커서가 직접 이동하고 클릭합니다.</p><div className="demo-choice-stack"><button className="primary-button demo-start" data-demo="demo-start" onClick={runRecordingDemo}><span>01</span><b>경기 참가 시연</b><small>포지션·장비 선택부터 MY 확인까지</small></button><button className="primary-button demo-start room-demo-start" onClick={runRoomCreationDemo}><span>02</span><b>방 만들기 시연</b><small>지역·구장·시간·결제·모집방 생성까지</small></button></div><small>각 시연은 약 20초 동안 자동으로 진행됩니다.</small></section></div>:null}
+      {showDemoIntro ? <div className="demo-intro-backdrop"><section className="demo-intro" role="dialog" aria-modal="true" aria-labelledby="demo-intro-title"><button className="close-button" onClick={()=>setShowDemoIntro(false)} aria-label="시연 안내 닫기"><X size={20}/></button><div className="demo-phone-icon">▶</div><p className="section-kicker">MOBILE DEMO</p><h2 id="demo-intro-title">어떤 흐름을 시연할까요?</h2><p>Windows 녹화를 시작한 뒤 원하는 시연을 고르면 커서가 직접 이동하고 클릭합니다.</p><div className="demo-choice-stack"><button className="primary-button demo-start" data-demo="demo-start" disabled={!demoIntroReady} onClick={runRecordingDemo}><span>01</span><b>경기 참가 시연</b><small>포지션·장비 선택부터 MY 확인까지</small></button><button className="primary-button demo-start room-demo-start" data-demo="room-demo-start" disabled={!demoIntroReady} onClick={runRoomCreationDemo}><span>02</span><b>방 만들기 시연</b><small>지역·구장·시간·결제·모집방 생성까지</small></button></div><small>{demoIntroReady ? "각 시연은 약 20초 동안 자동으로 진행됩니다." : "전체 화면을 준비하고 있습니다…"}</small></section></div>:null}
 
       {demoCursor.visible ? <div className={`demo-cursor ${demoCursor.clicking ? "clicking" : ""}`} style={{ left: demoCursor.x, top: demoCursor.y }} aria-hidden="true"><span /></div> : null}
 
