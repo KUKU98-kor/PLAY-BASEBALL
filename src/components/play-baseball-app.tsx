@@ -101,6 +101,7 @@ export function PlayBaseballApp() {
   const [reviewPlayerId, setReviewPlayerId] = useState<number | null>(null);
   const [reviewTags, setReviewTags] = useState<string[]>([]);
   const [reviewedPlayerIds, setReviewedPlayerIds] = useState<number[]>([]);
+  const [showMyMannerReport, setShowMyMannerReport] = useState(false);
 
   const filteredMatches = useMemo(
     () => region === "전체" ? matches : matches.filter((match) => match.city === region),
@@ -279,6 +280,7 @@ export function PlayBaseballApp() {
     setReviewPlayerId(null);
     setReviewTags([]);
     setReviewedPlayerIds([]);
+    setShowMyMannerReport(false);
     const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
     const moveAndClick = async (selector: string, action: () => void, scroll = false) => {
       const target = document.querySelector<HTMLElement>(selector);
@@ -311,6 +313,9 @@ export function PlayBaseballApp() {
       setReviewTags([]);
       setToast("최도윤님의 비공개 매너 리뷰를 저장했어요.");
     }, true);
+    await moveAndClick('[data-demo="open-my-review"]', () => setShowMyMannerReport(true), true);
+    await wait(350);
+    document.querySelector<HTMLElement>('[data-demo="my-manner-report"]')?.scrollIntoView({ behavior: "smooth", block: "center" });
     await wait(2600);
     setDemoCursor((current) => ({ ...current, visible: false }));
     setDemoRunning(false);
@@ -334,6 +339,7 @@ export function PlayBaseballApp() {
   function openGameResult() {
     setReviewPlayerId(null);
     setReviewTags([]);
+    setShowMyMannerReport(false);
     setResultOpen(true);
   }
 
@@ -570,6 +576,8 @@ export function PlayBaseballApp() {
         <div className="review-heading"><div><h3>함께 뛴 참가자 리뷰</h3><p>직접 경험한 행동을 기준으로 한 명씩 작성해 주세요.</p></div><span>{reviewedPlayerIds.length}/{completedGame.players.length} 완료</span></div>
         <div className="player-review-list">{completedGame.players.map((player)=><article key={player.id} className={reviewPlayerId===player.id?"selected":""}><div className="player-number">{player.number}</div><div><strong>{player.name}{player.mvp?<em>MVP</em>:null}</strong><span>{player.position} · {player.level}</span></div>{reviewedPlayerIds.includes(player.id)?<span className="review-done"><CheckCircle2 size={16}/>작성 완료</span>:<button className="secondary-button" data-demo={player.id===3?"review-player-3":undefined} onClick={()=>{setReviewPlayerId(player.id);setReviewTags([])}}>리뷰 쓰기</button>}</article>)}</div>
         {reviewPlayerId ? <section className="review-editor" aria-label="참가자 리뷰 작성"><div className="review-target"><MessageSquare size={19}/><span><small>리뷰 대상</small><strong>{completedGame.players.find((player)=>player.id===reviewPlayerId)?.name}</strong></span><button onClick={()=>{setReviewPlayerId(null);setReviewTags([])}}>취소</button></div><div className="review-tag-group positive"><h4>좋았던 점</h4><div>{positiveReviewTags.map((tag)=><button key={tag} className={reviewTags.includes(tag)?"selected":""} onClick={()=>toggleReviewTag(tag)} aria-pressed={reviewTags.includes(tag)}>{tag}</button>)}</div></div><div className="review-tag-group caution"><h4><AlertTriangle size={16}/>주의가 필요했던 행동</h4><p>감정이나 실력이 아닌, 실제로 확인한 행동만 선택해 주세요.</p><div>{cautionReviewTags.map((tag)=><button key={tag} data-demo={tag==="거친 플레이"?"review-caution-rough":undefined} className={reviewTags.includes(tag)?"selected":""} onClick={()=>toggleReviewTag(tag)} aria-pressed={reviewTags.includes(tag)}>{tag}</button>)}</div></div><div className="private-review-note"><ShieldCheck size={17}/>작성 내용은 운영 검토용으로만 보관되며 상대방에게 이름이 공개되지 않습니다.</div><button className="primary-button sheet-cta" data-demo="review-submit" disabled={reviewTags.length===0} onClick={submitPlayerReview}>이 리뷰 저장하기</button></section> : null}
+        {reviewedPlayerIds.length > 0 && !showMyMannerReport ? <button className="received-review-cta" data-demo="open-my-review" onClick={()=>setShowMyMannerReport(true)}><span className="received-review-icon"><MessageSquare size={22}/></span><span><small>나에게 도착한 평가 4개</small><strong>다른 참가자들은 나를 어떻게 평가했을까요?</strong></span><ChevronRight size={20}/></button> : null}
+        {showMyMannerReport ? <section className="my-manner-report" data-demo="my-manner-report" aria-label="내가 받은 매너 평가"><div className="manner-report-head"><div><span className="badge green">MY MANNER REPORT</span><h3>함께 뛰기 좋은 선수예요!</h3><p>이번 경기 참가자 4명의 평가를 익명으로 모았어요.</p></div><div className="manner-score"><strong>98</strong><span>매너 점수</span></div></div><div className="manner-summary-grid"><div><span>함께 뛰고 싶어요</span><strong>4<small>/4명</small></strong></div><div><span>받은 칭찬</span><strong>14<small>개</small></strong></div><div><span>주의 평가</span><strong className="safe">0<small>개</small></strong></div></div><div className="received-tag-list"><h4>내가 받은 칭찬</h4><div><span>매너 플레이 <b>4</b></span><span>안전하게 플레이해요 <b>4</b></span><span>팀원을 배려해요 <b>3</b></span><span>시간 약속을 지켜요 <b>3</b></span></div></div><div className="clear-manner-status"><ShieldCheck size={22}/><div><strong>주의가 필요한 행동이 없었어요.</strong><p>지금처럼 상대를 존중하고 안전하게 플레이해 주세요.</p></div></div><div className="anonymous-report-note"><CircleUserRound size={18}/><p>평가한 사람의 이름과 개별 응답은 공개하지 않아요. 여러 평가를 합산한 결과만 보여드립니다.</p></div><button className="secondary-button report-back" onClick={()=>setShowMyMannerReport(false)}>참가자 리뷰로 돌아가기</button></section> : null}
       </section></div> : null}
 
       {roomBuilderOpen ? <div className="overlay room-builder-overlay" role="presentation"><section className="sheet room-builder-sheet" role="dialog" aria-modal="true" aria-labelledby="room-builder-title">
