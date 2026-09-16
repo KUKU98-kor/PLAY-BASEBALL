@@ -85,7 +85,7 @@ export function PlayBaseballApp() {
   const [demoRunning, setDemoRunning] = useState(false);
   const [showDemoIntro, setShowDemoIntro] = useState(false);
   const [demoIntroReady, setDemoIntroReady] = useState(false);
-  const [demoPresentation, setDemoPresentation] = useState(false);
+  const [demoPresentation, setDemoPresentation] = useState(true);
   const [demoCursor, setDemoCursor] = useState({ visible: false, x: 215, y: 466, clicking: false });
   const [selectedGear, setSelectedGear] = useState<Gear | null>(null);
   const [gearCategory, setGearCategory] = useState("전체");
