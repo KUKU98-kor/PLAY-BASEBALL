@@ -34,11 +34,12 @@ type Rental = { gear:Gear; match:Match; status:"예약 완료" | "반납 완료"
 type Venue = { id:number; region:string; name:string; address:string; field:string; fee:number; slots:{ time:string; available:boolean }[] };
 type CreatedRoom = { venue:Venue; date:string; time:string; capacity:number; paid:number };
 type ReviewPlayer = { id:number; name:string; position:string; level:string; number:number; mvp?:boolean };
+type CatchballGroup = { id:number; city:string; title:string; place:string; time:string; level:string; people:string; host:{ name:string; experience:string; level:string; manner:number }; members:{ name:string; experience:string; level:string }[] };
 
-const catchballGroups = [
-  { id: 1, city: "대전", title: "퇴근 후 가볍게 캐치볼", place: "유림공원 잔디광장", time: "오늘 19:30", level: "입문 환영", people: "2/4명" },
-  { id: 2, city: "세종", title: "주말 오전 수비 연습", place: "금강스포츠공원", time: "토요일 09:00", level: "초급", people: "3/6명" },
-  { id: 3, city: "청주", title: "투수·포수 배터리 연습", place: "무심천 체육공원", time: "일요일 16:00", level: "경험자", people: "2/4명" },
+const catchballGroups: CatchballGroup[] = [
+  { id: 1, city: "대전", title: "퇴근 후 가볍게 캐치볼", place: "유림공원 잔디광장", time: "오늘 19:30", level: "초보자 환영", people: "2/4명", host:{ name:"김민준", experience:"캐치볼 18회", level:"초급자", manner:99 }, members:[{ name:"서지훈", experience:"캐치볼 7회", level:"초급자" }] },
+  { id: 2, city: "세종", title: "주말 오전 수비 연습", place: "금강스포츠공원", time: "토요일 09:00", level: "초급·중급", people: "3/6명", host:{ name:"박정우", experience:"캐치볼 34회", level:"중급자", manner:98 }, members:[{ name:"이민석", experience:"캐치볼 12회", level:"초급자" },{ name:"한지훈", experience:"캐치볼 27회", level:"중급자" }] },
+  { id: 3, city: "청주", title: "투수·포수 배터리 연습", place: "무심천 체육공원", time: "일요일 16:00", level: "중급자", people: "2/4명", host:{ name:"최도윤", experience:"캐치볼 41회", level:"중급자", manner:96 }, members:[{ name:"윤현수", experience:"캐치볼 22회", level:"중급자" }] },
 ];
 const gearCatalog: Gear[] = [
   { id:1, name:"내야수 글러브", category:"글러브", fit:"우투 · 11.75인치", price:10000, stock:4, icon:"🥎", badge:"포지션 추천" },
@@ -102,6 +103,14 @@ export function PlayBaseballApp() {
   const [reviewTags, setReviewTags] = useState<string[]>([]);
   const [reviewedPlayerIds, setReviewedPlayerIds] = useState<number[]>([]);
   const [showMyMannerReport, setShowMyMannerReport] = useState(false);
+  const [catchballBuilderOpen, setCatchballBuilderOpen] = useState(false);
+  const [catchballStep, setCatchballStep] = useState(1);
+  const [catchballPlace, setCatchballPlace] = useState("");
+  const [catchballTime, setCatchballTime] = useState("");
+  const [catchballLevel, setCatchballLevel] = useState("초보자 환영");
+  const [createdCatchballRoom, setCreatedCatchballRoom] = useState(false);
+  const [selectedCatchballGroup, setSelectedCatchballGroup] = useState<CatchballGroup | null>(null);
+  const [joinedCatchballId, setJoinedCatchballId] = useState<number | null>(null);
 
   const filteredMatches = useMemo(
     () => region === "전체" ? matches : matches.filter((match) => match.city === region),
@@ -321,6 +330,60 @@ export function PlayBaseballApp() {
     setDemoRunning(false);
   }
 
+  async function runCatchballDemo() {
+    if (demoRunning) return;
+    setShowDemoIntro(false);
+    setDemoPresentation(true);
+    setDemoRunning(true);
+    setCatchballBuilderOpen(false);
+    setCatchballStep(1);
+    setCatchballPlace("");
+    setCatchballTime("");
+    setCatchballLevel("초보자 환영");
+    setCreatedCatchballRoom(false);
+    setSelectedCatchballGroup(null);
+    setJoinedCatchballId(null);
+    const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+    const moveAndClick = async (selector: string, action: () => void, scroll = false) => {
+      const target = document.querySelector<HTMLElement>(selector);
+      if (!target) return;
+      if (scroll) {
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        await wait(650);
+      }
+      const rect = target.getBoundingClientRect();
+      setDemoCursor({ visible: true, x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, clicking: false });
+      await wait(700);
+      setDemoCursor((current) => ({ ...current, clicking: true }));
+      await wait(220);
+      action();
+      setDemoCursor((current) => ({ ...current, clicking: false }));
+      await wait(700);
+    };
+
+    setActiveTab("home");
+    window.scrollTo({ top: 0, behavior: "auto" });
+    await wait(700);
+    await moveAndClick('[data-demo="nav-catchball"]', () => setActiveTab("catchball"));
+    await moveAndClick('[data-demo="catchball-create-open"]', () => { setCatchballBuilderOpen(true); setCatchballStep(1); }, true);
+    await moveAndClick('[data-demo="catchball-place-first"]', () => setCatchballPlace("갑천 체육공원"));
+    await moveAndClick('[data-demo="catchball-builder-next"]', () => setCatchballStep(2));
+    await moveAndClick('[data-demo="catchball-time-first"]', () => setCatchballTime("오늘 20:00"));
+    await moveAndClick('[data-demo="catchball-level-beginner"]', () => setCatchballLevel("초보자 환영"));
+    await moveAndClick('[data-demo="catchball-create-confirm"]', () => { setCreatedCatchballRoom(true); setCatchballStep(3); setToast("캐치볼 약속방을 만들었어요."); }, true);
+    await moveAndClick('[data-demo="catchball-create-finish"]', () => setCatchballBuilderOpen(false));
+    await wait(500);
+    document.querySelector<HTMLElement>('[data-demo="created-catchball-room"]')?.scrollIntoView({ behavior: "smooth", block: "center" });
+    await wait(1600);
+    await moveAndClick('[data-demo="catchball-group-2"]', () => setSelectedCatchballGroup(catchballGroups[1]), true);
+    await moveAndClick('[data-demo="catchball-join"]', () => { setJoinedCatchballId(2); setToast("박정우님과 캐치볼 약속이 확정됐어요."); }, true);
+    await wait(500);
+    document.querySelector<HTMLElement>('[data-demo="catchball-appointment"]')?.scrollIntoView({ behavior: "smooth", block: "center" });
+    await wait(2800);
+    setDemoCursor((current) => ({ ...current, visible: false }));
+    setDemoRunning(false);
+  }
+
   function reserveGear() {
     if (!selectedGear) return;
     setRentals((current) => [{ gear:selectedGear, match:matches[0], status:"예약 완료" }, ...current.filter((item) => item.gear.id !== selectedGear.id)]);
@@ -480,8 +543,10 @@ export function PlayBaseballApp() {
 
         {activeTab === "catchball" ? <section className="page-screen" aria-labelledby="catchball-title">
           <div className="page-hero catchball-hero"><div><span className="eyebrow"><Users size={16}/> CATCH BALL</span><h1 id="catchball-title" className="display">경기 전, 가볍게 같이 던져요.</h1><p>가까운 동네 야구인과 부담 없이 만나 캐치볼하고 연습해요.</p></div><div className="ball-graphic" aria-hidden="true">⚾</div></div>
-          <div className="section-head"><div><h2 className="display">가까운 캐치볼 모임</h2><p>현재 모집 중인 충청권 모임입니다.</p></div><button className="secondary-button" onClick={() => setToast("캐치볼 모임 만들기는 다음 시연 단계에서 연결됩니다.")}>+ 모임 만들기</button></div>
-          <div className="catchball-grid">{catchballGroups.map((group) => <article className="catchball-card" key={group.id}><div className="catchball-top"><span className="badge">{group.city}</span><span className="open-dot">모집 중</span></div><h3>{group.title}</h3><div className="meta"><div className="meta-row"><Clock3 size={17}/>{group.time}</div><div className="meta-row"><MapPin size={17}/>{group.place}</div></div><div className="catchball-footer"><div><span className="badge green">{group.level}</span><span><Users size={15}/>{group.people}</span></div><button className="primary-button" onClick={() => setToast(`${group.title} 참여 요청을 보냈어요.`)}>함께하기</button></div></article>)}</div>
+          <div className="catchball-actions"><div><span>원하는 약속이 없나요?</span><strong>장소와 시간을 정해 직접 모집해 보세요.</strong></div><button className="primary-button" data-demo="catchball-create-open" onClick={()=>{setCatchballBuilderOpen(true);setCatchballStep(1)}}>+ 캐치볼 방 만들기</button></div>
+          {createdCatchballRoom ? <article className="created-catchball-card" data-demo="created-catchball-room"><div className="created-catchball-label"><CheckCircle2 size={18}/><span>내가 만든 방 · 모집 중</span></div><div><h3>저녁에 천천히 캐치볼해요</h3><p><Clock3 size={15}/>오늘 20:00 <i/> <MapPin size={15}/>갑천 체육공원</p></div><div className="catchball-person host"><span className="person-avatar">나</span><div><small>방장 · 김플레이어</small><strong>캐치볼 12회 · 초급자</strong></div><span className="badge green">초보자 환영</span></div><div className="created-catchball-status"><Users size={17}/><strong>1/4명</strong><span>참가자를 기다리고 있어요</span></div></article> : null}
+          <div className="section-head"><div><h2 className="display">가까운 캐치볼 모임</h2><p>시간과 장소, 참여자의 경험을 확인하고 약속을 잡으세요.</p></div><span className="result-count">{catchballGroups.length} ROOMS</span></div>
+          <div className="catchball-grid">{catchballGroups.map((group) => <article className="catchball-card" key={group.id}><div className="catchball-top"><span className="badge">{group.city}</span><span className="open-dot">모집 중</span></div><h3>{group.title}</h3><div className="meta"><div className="meta-row"><Clock3 size={17}/>{group.time}</div><div className="meta-row"><MapPin size={17}/>{group.place}</div></div><div className="catchball-person"><span className="person-avatar">{group.host.name.slice(0,1)}</span><div><small>방장 · {group.host.name}</small><strong>{group.host.experience} · {group.host.level}</strong></div><span className="manner-mini">매너 {group.host.manner}</span></div><div className="catchball-footer"><div><span className="badge green">{group.level}</span><span><Users size={15}/>{group.people}</span></div><button className="primary-button" data-demo={group.id===2?"catchball-group-2":undefined} onClick={()=>setSelectedCatchballGroup(group)}>상세·참가</button></div></article>)}</div>
           <div className="safety-note"><ShieldCheck size={24}/><div><strong>안전한 만남을 위한 PLAY 약속</strong><p>공공장소에서 만나고, 일정 변경은 참여자 채팅으로 미리 알려주세요.</p></div></div>
         </section> : null}
 
@@ -518,7 +583,7 @@ export function PlayBaseballApp() {
       <nav className="bottom-nav five" aria-label="주요 메뉴">
         <button className={`nav-item ${activeTab === "home" ? "active" : ""}`} data-demo="nav-home" onClick={() => setActiveTab("home")}><Home size={20} aria-hidden="true" />홈</button>
         <button className={`nav-item ${activeTab === "search" ? "active" : ""}`} data-demo="nav-search" onClick={() => setActiveTab("search")}><Search size={20} aria-hidden="true" />경기 찾기</button>
-        <button className={`nav-item ${activeTab === "catchball" ? "active" : ""}`} onClick={() => setActiveTab("catchball")}><Users size={20} aria-hidden="true" />캐치볼</button>
+        <button className={`nav-item ${activeTab === "catchball" ? "active" : ""}`} data-demo="nav-catchball" onClick={() => setActiveTab("catchball")}><Users size={20} aria-hidden="true" />캐치볼</button>
         <button className={`nav-item ${activeTab === "gear" ? "active" : ""}`} onClick={() => setActiveTab("gear")}><PackageCheck size={20} aria-hidden="true" />장비</button>
         <button className={`nav-item ${activeTab === "my" ? "active" : ""}`} data-demo="nav-my" onClick={() => setActiveTab("my")}><CircleUserRound size={20} aria-hidden="true" />MY</button>
       </nav>
@@ -569,6 +634,17 @@ export function PlayBaseballApp() {
 
       {selectedGear ? <div className="overlay" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setSelectedGear(null)}}><section className="sheet gear-sheet" role="dialog" aria-modal="true" aria-labelledby="gear-rental-title"><div className="sheet-head"><div><span className="badge">PLAY GEAR RESERVATION</span><h2 id="gear-rental-title">{selectedGear.name}</h2><p className="helper">{selectedGear.fit}</p></div><button className="close-button" onClick={()=>setSelectedGear(null)} aria-label="장비 예약 닫기"><X size={21}/></button></div><div className="rental-summary"><div><span>연결 경기</span><strong>9월 20일 (토) · 대전</strong><small>한밭 베이스볼파크</small></div><div><span>수령·반납</span><strong>경기장 PLAY 운영 부스</strong><small>경기 30분 전 수령 · 종료 후 20분 이내 반납</small></div><div><span>대여료</span><strong>{selectedGear.price.toLocaleString()}원</strong><small>참가비 결제 시 함께 결제</small></div></div><label className="rental-check"><input type="checkbox" defaultChecked/> 장비 상태 확인 및 현장 반납 안내를 확인했습니다.</label><button className="primary-button sheet-cta" onClick={reserveGear}>이 장비 예약하기</button></section></div>:null}
 
+      {catchballBuilderOpen ? <div className="overlay catchball-overlay" role="presentation"><section className="sheet catchball-sheet" role="dialog" aria-modal="true" aria-labelledby="catchball-builder-title"><div className="sheet-head"><div><span className="badge green">CREATE CATCH BALL</span><h2 id="catchball-builder-title">캐치볼 방 만들기</h2><p className="helper">장소와 시간을 올리면 가까운 야구인이 참여할 수 있어요.</p></div><button className="close-button" onClick={()=>setCatchballBuilderOpen(false)} aria-label="캐치볼 방 만들기 닫기"><X size={21}/></button></div>
+        {catchballStep < 3 ? <div className="catchball-progress"><span className="active">1 장소</span><i/><span className={catchballStep>=2?"active":""}>2 시간·대상</span></div> : null}
+        {catchballStep === 1 ? <div className="catchball-builder-step"><div className="room-step-title"><b>1</b><div><h3>어디에서 만날까요?</h3><p>사람들이 찾기 쉬운 공공장소를 선택하세요.</p></div></div><div className="catchball-place-list">{[{name:"갑천 체육공원",detail:"대전 서구 · 잔디광장"},{name:"유림공원 잔디광장",detail:"대전 유성구 · 조명 있음"},{name:"한밭수목원 운동장",detail:"대전 서구 · 주차 가능"}].map((place,index)=><button key={place.name} data-demo={index===0?"catchball-place-first":undefined} className={catchballPlace===place.name?"selected":""} onClick={()=>setCatchballPlace(place.name)}><MapPin size={19}/><span><strong>{place.name}</strong><small>{place.detail}</small></span><CheckCircle2 size={18}/></button>)}</div><button className="primary-button sheet-cta" data-demo="catchball-builder-next" disabled={!catchballPlace} onClick={()=>setCatchballStep(2)}>이 장소에서 시간 정하기</button></div> : null}
+        {catchballStep === 2 ? <div className="catchball-builder-step"><div className="room-step-title"><b>2</b><div><h3>시간과 참여 대상을 정하세요.</h3><p>{catchballPlace} · 최대 4명</p></div></div><h4 className="choice-label">만날 시간</h4><div className="catchball-time-grid">{["오늘 20:00","내일 19:30","토요일 10:00"].map((time,index)=><button key={time} data-demo={index===0?"catchball-time-first":undefined} className={catchballTime===time?"selected":""} onClick={()=>setCatchballTime(time)}><Clock3 size={17}/><strong>{time}</strong></button>)}</div><h4 className="choice-label">참여 가능 경험</h4><div className="catchball-level-grid">{["초보자 환영","초급·중급","중급자"].map((level,index)=><button key={level} data-demo={index===0?"catchball-level-beginner":undefined} className={catchballLevel===level?"selected":""} onClick={()=>setCatchballLevel(level)}>{level}</button>)}</div><div className="my-catchball-profile"><span className="person-avatar">나</span><div><small>방장에게 표시되는 내 정보</small><strong>김플레이어 · 캐치볼 12회 · 초급자</strong></div></div><div className="room-actions"><button className="secondary-button" onClick={()=>setCatchballStep(1)}>이전</button><button className="primary-button" data-demo="catchball-create-confirm" disabled={!catchballTime} onClick={()=>{setCreatedCatchballRoom(true);setCatchballStep(3);setToast("캐치볼 약속방을 만들었어요.")}}>모집 시작하기</button></div></div> : null}
+        {catchballStep === 3 ? <div className="catchball-created"><div className="success-mark"><CheckCircle2 size={42}/></div><span className="badge green">캐치볼 방 생성 완료</span><h3>같이 던질 사람을 기다리고 있어요!</h3><p>참가자가 들어오면 알림으로 알려드릴게요.</p><div className="catchball-ticket"><strong>저녁에 천천히 캐치볼해요</strong><span><Clock3 size={15}/>{catchballTime}</span><span><MapPin size={15}/>{catchballPlace}</span><small>{catchballLevel} · 1/4명</small></div><button className="primary-button sheet-cta" data-demo="catchball-create-finish" onClick={()=>setCatchballBuilderOpen(false)}>내가 만든 방 확인하기</button></div> : null}
+      </section></div> : null}
+
+      {selectedCatchballGroup ? <div className="overlay catchball-overlay" role="presentation"><section className="sheet catchball-detail-sheet" role="dialog" aria-modal="true" aria-labelledby="catchball-detail-title"><div className="sheet-head"><div><span className="badge green">CATCH BALL MATCH</span><h2 id="catchball-detail-title">{selectedCatchballGroup.title}</h2><p className="helper">{selectedCatchballGroup.city} · {selectedCatchballGroup.people}</p></div><button className="close-button" onClick={()=>setSelectedCatchballGroup(null)} aria-label="캐치볼 상세 닫기"><X size={21}/></button></div>
+        {joinedCatchballId===selectedCatchballGroup.id ? <div className="catchball-appointment" data-demo="catchball-appointment"><div className="success-mark"><CheckCircle2 size={42}/></div><span className="badge green">약속 확정</span><h3>박정우님과 캐치볼 약속을 잡았어요!</h3><p>토요일 오전, 금강스포츠공원에서 만나요.</p><div className="appointment-info"><div><Clock3 size={19}/><span><small>시간</small><strong>{selectedCatchballGroup.time}</strong></span></div><div><MapPin size={19}/><span><small>장소</small><strong>{selectedCatchballGroup.place}</strong></span></div></div><div className="appointment-people"><h4>함께하는 사람들</h4><div className="catchball-person host"><span className="person-avatar">박</span><div><small>방장 · 박정우</small><strong>캐치볼 34회 · 중급자</strong></div><span className="manner-mini">매너 98</span></div><div className="catchball-person me"><span className="person-avatar">나</span><div><small>참가자 · 김플레이어</small><strong>캐치볼 12회 · 초급자</strong></div><span className="badge green">참가 확정</span></div></div><div className="safety-confirm"><ShieldCheck size={20}/><span>약속 전날과 2시간 전에 알림을 보내드려요.</span></div></div> : <><div className="catchball-detail-meta"><div><Clock3 size={20}/><span><small>만날 시간</small><strong>{selectedCatchballGroup.time}</strong></span></div><div><MapPin size={20}/><span><small>장소</small><strong>{selectedCatchballGroup.place}</strong></span></div></div><div className="host-profile-card"><span className="person-avatar large">{selectedCatchballGroup.host.name.slice(0,1)}</span><div><small>방장</small><h3>{selectedCatchballGroup.host.name}</h3><p>{selectedCatchballGroup.host.experience} · {selectedCatchballGroup.host.level}</p></div><span className="manner-score-mini">매너 {selectedCatchballGroup.host.manner}</span></div><div className="participant-preview"><div className="review-heading"><div><h3>현재 참가자</h3><p>캐치볼 경험과 수준을 미리 확인하세요.</p></div><span>{selectedCatchballGroup.people}</span></div>{selectedCatchballGroup.members.map((member)=><div className="catchball-person" key={member.name}><span className="person-avatar">{member.name.slice(0,1)}</span><div><small>참가자 · {member.name}</small><strong>{member.experience} · {member.level}</strong></div></div>)}</div><div className="my-join-profile"><CircleUserRound size={21}/><div><small>내 정보도 이렇게 표시돼요</small><strong>김플레이어 · 캐치볼 12회 · 초급자</strong></div></div><button className="primary-button sheet-cta" data-demo="catchball-join" onClick={()=>{setJoinedCatchballId(selectedCatchballGroup.id);setToast(`${selectedCatchballGroup.host.name}님과 캐치볼 약속이 확정됐어요.`)}}>이 약속에 참가하기</button></>}
+      </section></div> : null}
+
       {resultOpen ? <div className="overlay result-overlay" role="presentation"><section className="sheet result-sheet" role="dialog" aria-modal="true" aria-labelledby="result-title"><div className="sheet-head"><div><span className="badge green">FINAL SCORE</span><h2 id="result-title">{completedGame.date} 경기 결과</h2><p className="helper">{completedGame.venue} · {completedGame.time}</p></div><button className="close-button" onClick={()=>setResultOpen(false)} aria-label="경기 결과 닫기"><X size={21}/></button></div>
         <div className="final-scoreboard"><div><span>{completedGame.home}</span><strong>{completedGame.homeScore}</strong></div><b>FINAL</b><div><span>{completedGame.away}</span><strong>{completedGame.awayScore}</strong></div></div>
         <section className="mvp-card" aria-label="경기 MVP"><div className="mvp-crown"><Award size={30}/></div><div><span>GAME MVP</span><h3>{completedGame.mvp.name} · {completedGame.mvp.position}</h3><p>{completedGame.mvp.summary}</p></div><Star size={25}/></section>
@@ -595,7 +671,7 @@ export function PlayBaseballApp() {
         {roomStep === 5 && createdRoom ? <div className="room-created"><div className="success-mark"><CheckCircle2 size={42}/></div><span className="badge green">모집방 생성 완료</span><h3>{createdRoom.date} 경기가 열렸어요!</h3><p>구장 예약이 확정됐습니다. 이제 함께 뛸 참가자를 모집할 수 있어요.</p><div className="created-ticket"><div><span>{createdRoom.venue.region}</span><strong>{createdRoom.venue.name}</strong><small>{createdRoom.date} · {createdRoom.time}</small></div><div><small>모집 현황</small><strong>0/{createdRoom.capacity}명</strong></div></div><button className="primary-button sheet-cta" data-demo="room-finish" onClick={()=>setRoomBuilderOpen(false)}>내 모집방 확인하기</button></div> : null}
       </section></div> : null}
 
-      {showDemoIntro ? <div className="demo-intro-backdrop"><section className="demo-intro" role="dialog" aria-modal="true" aria-labelledby="demo-intro-title"><button className="close-button" onClick={()=>setShowDemoIntro(false)} aria-label="시연 안내 닫기"><X size={20}/></button><div className="demo-phone-icon">▶</div><p className="section-kicker">MOBILE DEMO</p><h2 id="demo-intro-title">어떤 흐름을 시연할까요?</h2><p>Windows 녹화를 시작한 뒤 원하는 시연을 고르면 커서가 직접 이동하고 클릭합니다.</p><div className="demo-choice-stack"><button className="primary-button demo-start" data-demo="demo-start" disabled={!demoIntroReady} onClick={runRecordingDemo}><span>01</span><b>경기 참가 시연</b><small>포지션·장비 선택부터 MY 확인까지</small></button><button className="primary-button demo-start room-demo-start" data-demo="room-demo-start" disabled={!demoIntroReady} onClick={runRoomCreationDemo}><span>02</span><b>방 만들기 시연</b><small>지역·구장·시간·결제·모집방 생성까지</small></button><button className="primary-button demo-start review-demo-start" data-demo="review-demo-start" disabled={!demoIntroReady} onClick={runPostGameReviewDemo}><span>03</span><b>경기 결과·리뷰 시연</b><small>종료 경기·MVP 확인과 비공개 매너 리뷰</small></button></div><small>{demoIntroReady ? "각 시연은 약 20초 동안 자동으로 진행됩니다." : "전체 화면을 준비하고 있습니다…"}</small></section></div>:null}
+      {showDemoIntro ? <div className="demo-intro-backdrop"><section className="demo-intro" role="dialog" aria-modal="true" aria-labelledby="demo-intro-title"><button className="close-button" onClick={()=>setShowDemoIntro(false)} aria-label="시연 안내 닫기"><X size={20}/></button><div className="demo-phone-icon">▶</div><p className="section-kicker">MOBILE DEMO</p><h2 id="demo-intro-title">어떤 흐름을 시연할까요?</h2><p>Windows 녹화를 시작한 뒤 원하는 시연을 고르면 커서가 직접 이동하고 클릭합니다.</p><div className="demo-choice-stack"><button className="primary-button demo-start" data-demo="demo-start" disabled={!demoIntroReady} onClick={runRecordingDemo}><span>01</span><b>경기 참가 시연</b><small>포지션·장비 선택부터 MY 확인까지</small></button><button className="primary-button demo-start room-demo-start" data-demo="room-demo-start" disabled={!demoIntroReady} onClick={runRoomCreationDemo}><span>02</span><b>방 만들기 시연</b><small>지역·구장·시간·결제·모집방 생성까지</small></button><button className="primary-button demo-start review-demo-start" data-demo="review-demo-start" disabled={!demoIntroReady} onClick={runPostGameReviewDemo}><span>03</span><b>경기 결과·리뷰 시연</b><small>종료 경기·MVP 확인과 비공개 매너 리뷰</small></button><button className="primary-button demo-start catchball-demo-start" data-demo="catchball-demo-start" disabled={!demoIntroReady} onClick={runCatchballDemo}><span>04</span><b>캐치볼 매칭 시연</b><small>방 만들기와 원하는 약속 참가를 한 번에</small></button></div><small>{demoIntroReady ? "각 시연은 약 20~30초 동안 자동으로 진행됩니다." : "전체 화면을 준비하고 있습니다…"}</small></section></div>:null}
 
       {demoCursor.visible ? <div className={`demo-cursor ${demoCursor.clicking ? "clicking" : ""}`} style={{ left: demoCursor.x, top: demoCursor.y }} aria-hidden="true"><span /></div> : null}
 
