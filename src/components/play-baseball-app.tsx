@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Bell, CalendarDays, ChevronRight, CircleUserRound, Clock3, Home, MapPin, PackageCheck, Search, ShieldCheck, Trophy, Users, X } from "lucide-react";
+import { Bell, Building2, CalendarDays, CheckCircle2, ChevronRight, CircleUserRound, Clock3, CreditCard, Home, MapPin, PackageCheck, Search, ShieldCheck, Trophy, Users, X } from "lucide-react";
 
 type Match = {
   id: number;
@@ -31,6 +31,8 @@ type Tab = "home" | "search" | "catchball" | "gear" | "my";
 type Application = { match: Match; positions: string[]; status: "승인 완료" | "승인 대기" };
 type Gear = { id:number; name:string; category:string; fit:string; price:number; stock:number; icon:string; badge:string };
 type Rental = { gear:Gear; match:Match; status:"예약 완료" | "반납 완료" };
+type Venue = { id:number; region:string; name:string; address:string; field:string; fee:number; slots:{ time:string; available:boolean }[] };
+type CreatedRoom = { venue:Venue; date:string; time:string; capacity:number; paid:number };
 
 const catchballGroups = [
   { id: 1, city: "대전", title: "퇴근 후 가볍게 캐치볼", place: "유림공원 잔디광장", time: "오늘 19:30", level: "입문 환영", people: "2/4명" },
@@ -44,6 +46,13 @@ const gearCatalog: Gear[] = [
   { id:4, name:"타자 헬멧", category:"보호장비", fit:"양귀 · M/L", price:10000, stock:8, icon:"🪖", badge:"안전 점검" },
   { id:5, name:"포수 보호 세트", category:"보호장비", fit:"마스크·프로텍터·렉가드", price:10000, stock:2, icon:"🛡️", badge:"세트 대여" },
   { id:6, name:"입문자 스타터 세트", category:"세트", fit:"글러브·배트·헬멧", price:10000, stock:3, icon:"🎒", badge:"첫 경기 추천" },
+];
+
+const venues: Venue[] = [
+  { id:1, region:"대전", name:"한밭 베이스볼파크", address:"대전 유성구 용계동", field:"인조잔디 · 조명", fee:120000, slots:[{time:"09:00–12:00",available:false},{time:"13:00–16:00",available:true},{time:"17:00–20:00",available:true}] },
+  { id:2, region:"대전", name:"대덕 드림구장", address:"대전 대덕구 문평동", field:"인조잔디 · 덕아웃", fee:150000, slots:[{time:"08:00–11:00",available:true},{time:"12:00–15:00",available:false},{time:"16:00–19:00",available:true}] },
+  { id:3, region:"세종", name:"세종 중앙야구장", address:"세종 연기면 세종리", field:"천연잔디 · 주차장", fee:140000, slots:[{time:"09:00–12:00",available:true},{time:"13:00–16:00",available:true},{time:"17:00–20:00",available:false}] },
+  { id:4, region:"청주", name:"청주 생활야구장", address:"청주 흥덕구 문암동", field:"인조잔디 · 조명", fee:110000, slots:[{time:"08:00–11:00",available:false},{time:"12:00–15:00",available:true},{time:"16:00–19:00",available:true}] },
 ];
 
 export function PlayBaseballApp() {
@@ -66,11 +75,19 @@ export function PlayBaseballApp() {
   const [rentals, setRentals] = useState<Rental[]>([]);
   const [addGearToMatch, setAddGearToMatch] = useState(false);
   const [matchGearIds, setMatchGearIds] = useState<number[]>([]);
+  const [roomBuilderOpen, setRoomBuilderOpen] = useState(false);
+  const [roomStep, setRoomStep] = useState(1);
+  const [roomRegion, setRoomRegion] = useState("대전");
+  const [selectedVenueId, setSelectedVenueId] = useState<number | null>(null);
+  const [selectedRoomTime, setSelectedRoomTime] = useState("");
+  const [createdRoom, setCreatedRoom] = useState<CreatedRoom | null>(null);
 
   const filteredMatches = useMemo(
     () => region === "전체" ? matches : matches.filter((match) => match.city === region),
     [region],
   );
+  const roomVenues = useMemo(() => venues.filter((venue) => venue.region === roomRegion), [roomRegion]);
+  const selectedRoomVenue = venues.find((venue) => venue.id === selectedVenueId) ?? null;
 
   useEffect(() => {
     if (!toast) return;
@@ -179,11 +196,75 @@ export function PlayBaseballApp() {
     setDemoRunning(false);
   }
 
+  async function runRoomCreationDemo() {
+    if (demoRunning) return;
+    setShowDemoIntro(false);
+    setDemoPresentation(true);
+    setDemoRunning(true);
+    setCreatedRoom(null);
+    setRoomBuilderOpen(false);
+    const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+    const moveAndClick = async (selector: string, action: () => void, scroll = false) => {
+      const target = document.querySelector<HTMLElement>(selector);
+      if (!target) return;
+      if (scroll) {
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        await wait(700);
+      }
+      const rect = target.getBoundingClientRect();
+      setDemoCursor({ visible: true, x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, clicking: false });
+      await wait(780);
+      setDemoCursor((current) => ({ ...current, clicking: true }));
+      await wait(220);
+      action();
+      setDemoCursor((current) => ({ ...current, clicking: false }));
+      await wait(720);
+    };
+
+    setActiveTab("home");
+    window.scrollTo({ top: 0, behavior: "auto" });
+    await wait(900);
+    await moveAndClick('[data-demo="nav-search"]', () => setActiveTab("search"));
+    await wait(500);
+    await moveAndClick('[data-demo="room-open"]', openRoomBuilder, true);
+    await moveAndClick('[data-demo="room-region-daejeon"]', () => setRoomRegion("대전"));
+    await moveAndClick('[data-demo="room-region-next"]', () => setRoomStep(2));
+    await moveAndClick('[data-demo="room-venue-first"]', () => setSelectedVenueId(1));
+    await moveAndClick('[data-demo="room-venue-next"]', () => setRoomStep(3));
+    await moveAndClick('[data-demo="room-slot-first"]', () => setSelectedRoomTime("13:00–16:00"));
+    await moveAndClick('[data-demo="room-slot-next"]', () => setRoomStep(4));
+    await moveAndClick('[data-demo="room-pay"]', () => {
+      setCreatedRoom({ venue:venues[0], date:"9월 27일 (토)", time:"13:00–16:00", capacity:20, paid:venues[0].fee });
+      setRoomStep(5);
+      setToast("구장 결제가 완료되어 모집방이 열렸어요.");
+    }, true);
+    await moveAndClick('[data-demo="room-finish"]', () => setRoomBuilderOpen(false), true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    await wait(1800);
+    setDemoCursor((current) => ({ ...current, visible: false }));
+    setDemoRunning(false);
+  }
+
   function reserveGear() {
     if (!selectedGear) return;
     setRentals((current) => [{ gear:selectedGear, match:matches[0], status:"예약 완료" }, ...current.filter((item) => item.gear.id !== selectedGear.id)]);
     setSelectedGear(null);
     setToast("장비 예약이 완료됐어요. 경기 30분 전 운영 부스에서 받아보세요.");
+  }
+
+  function openRoomBuilder() {
+    setRoomStep(1);
+    setRoomRegion("대전");
+    setSelectedVenueId(null);
+    setSelectedRoomTime("");
+    setRoomBuilderOpen(true);
+  }
+
+  function confirmRoomCreation() {
+    if (!selectedRoomVenue || !selectedRoomTime) return;
+    setCreatedRoom({ venue:selectedRoomVenue, date:"9월 27일 (토)", time:selectedRoomTime, capacity:20, paid:selectedRoomVenue.fee });
+    setRoomStep(5);
+    setToast("구장 결제가 완료되어 모집방이 열렸어요.");
   }
 
   return (
@@ -274,6 +355,16 @@ export function PlayBaseballApp() {
             <h1 id="search-title" className="display">내 일정에 맞는 경기를 찾아보세요.</h1>
             <p>충청권 생활야구 경기를 지역, 날짜, 실력으로 빠르게 찾을 수 있어요.</p>
           </div>
+          <section className="room-maker-banner" aria-label="새 경기방 만들기">
+            <div className="room-maker-mark"><Building2 size={28}/></div>
+            <div><strong>원하는 경기가 없다면 직접 열어보세요.</strong><p>지역과 빈 구장 시간을 고르고 결제하면 바로 참가자를 모집할 수 있어요.</p></div>
+            <button className="primary-button" data-demo="room-open" onClick={openRoomBuilder}>방 만들기 <ChevronRight size={17}/></button>
+          </section>
+          {createdRoom ? <article className="created-room-card" aria-label="내가 만든 모집방">
+            <div className="created-room-status"><span>모집 중</span><strong>0/{createdRoom.capacity}명</strong></div>
+            <div><span className="badge">내가 만든 방</span><h3>{createdRoom.date} 경기</h3><p><MapPin size={15}/>{createdRoom.venue.name}</p><p><Clock3 size={15}/>{createdRoom.time}</p></div>
+            <button className="secondary-button" onClick={openRoomBuilder}>방 정보 보기</button>
+          </article> : null}
           <div className="search-panel">
             <label><span>지역</span><select value={region} onChange={(event) => setRegion(event.target.value)}>{regions.map((item) => <option key={item}>{item}</option>)}</select></label>
             <label><span>날짜</span><select defaultValue="이번 달"><option>이번 주</option><option>이번 달</option><option>날짜 직접 선택</option></select></label>
@@ -322,7 +413,7 @@ export function PlayBaseballApp() {
 
       <nav className="bottom-nav five" aria-label="주요 메뉴">
         <button className={`nav-item ${activeTab === "home" ? "active" : ""}`} onClick={() => setActiveTab("home")}><Home size={20} aria-hidden="true" />홈</button>
-        <button className={`nav-item ${activeTab === "search" ? "active" : ""}`} onClick={() => setActiveTab("search")}><Search size={20} aria-hidden="true" />경기 찾기</button>
+        <button className={`nav-item ${activeTab === "search" ? "active" : ""}`} data-demo="nav-search" onClick={() => setActiveTab("search")}><Search size={20} aria-hidden="true" />경기 찾기</button>
         <button className={`nav-item ${activeTab === "catchball" ? "active" : ""}`} onClick={() => setActiveTab("catchball")}><Users size={20} aria-hidden="true" />캐치볼</button>
         <button className={`nav-item ${activeTab === "gear" ? "active" : ""}`} onClick={() => setActiveTab("gear")}><PackageCheck size={20} aria-hidden="true" />장비</button>
         <button className={`nav-item ${activeTab === "my" ? "active" : ""}`} data-demo="nav-my" onClick={() => setActiveTab("my")}><CircleUserRound size={20} aria-hidden="true" />MY</button>
@@ -374,7 +465,22 @@ export function PlayBaseballApp() {
 
       {selectedGear ? <div className="overlay" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setSelectedGear(null)}}><section className="sheet gear-sheet" role="dialog" aria-modal="true" aria-labelledby="gear-rental-title"><div className="sheet-head"><div><span className="badge">PLAY GEAR RESERVATION</span><h2 id="gear-rental-title">{selectedGear.name}</h2><p className="helper">{selectedGear.fit}</p></div><button className="close-button" onClick={()=>setSelectedGear(null)} aria-label="장비 예약 닫기"><X size={21}/></button></div><div className="rental-summary"><div><span>연결 경기</span><strong>9월 20일 (토) · 대전</strong><small>한밭 베이스볼파크</small></div><div><span>수령·반납</span><strong>경기장 PLAY 운영 부스</strong><small>경기 30분 전 수령 · 종료 후 20분 이내 반납</small></div><div><span>대여료</span><strong>{selectedGear.price.toLocaleString()}원</strong><small>참가비 결제 시 함께 결제</small></div></div><label className="rental-check"><input type="checkbox" defaultChecked/> 장비 상태 확인 및 현장 반납 안내를 확인했습니다.</label><button className="primary-button sheet-cta" onClick={reserveGear}>이 장비 예약하기</button></section></div>:null}
 
-      {showDemoIntro ? <div className="demo-intro-backdrop"><section className="demo-intro" role="dialog" aria-modal="true" aria-labelledby="demo-intro-title"><button className="close-button" onClick={()=>setShowDemoIntro(false)} aria-label="시연 안내 닫기"><X size={20}/></button><div className="demo-phone-icon">▶</div><p className="section-kicker">MOBILE DEMO</p><h2 id="demo-intro-title">녹화 준비가 되셨나요?</h2><p>Windows 녹화를 시작한 뒤 아래 버튼을 누르면 커서가 직접 이동하며 시연합니다.</p><ol><li><b>1</b><span>경기 참가하기</span></li><li><b>2</b><span>포지션·장비 선택</span></li><li><b>3</b><span>MY 신청 현황 확인</span></li><li><b>4</b><span>내 정보 확인</span></li></ol><button className="primary-button demo-start" data-demo="demo-start" onClick={runRecordingDemo}>시연 시작</button><small>약 20초 동안 자동으로 진행됩니다.</small></section></div>:null}
+      {roomBuilderOpen ? <div className="overlay room-builder-overlay" role="presentation"><section className="sheet room-builder-sheet" role="dialog" aria-modal="true" aria-labelledby="room-builder-title">
+        <div className="sheet-head"><div><span className="badge">HOST A MATCH</span><h2 id="room-builder-title">경기방 만들기</h2><p className="helper">구장을 먼저 확보한 뒤 참가자를 모집합니다.</p></div><button className="close-button" onClick={()=>setRoomBuilderOpen(false)} aria-label="방 만들기 닫기"><X size={21}/></button></div>
+        {roomStep < 5 ? <div className="room-progress" aria-label={`방 만들기 ${roomStep}단계`}><span className={roomStep>=1?"active":""}>지역</span><i/><span className={roomStep>=2?"active":""}>구장</span><i/><span className={roomStep>=3?"active":""}>시간</span><i/><span className={roomStep>=4?"active":""}>결제</span></div> : null}
+
+        {roomStep === 1 ? <div className="room-step"><div className="room-step-title"><b>1</b><div><h3>어느 지역에서 경기할까요?</h3><p>충청권 운영 구장을 지역별로 확인할 수 있어요.</p></div></div><div className="region-choice-grid">{["대전","세종","청주"].map((item)=><button key={item} data-demo={item==="대전"?"room-region-daejeon":undefined} className={roomRegion===item?"selected":""} onClick={()=>{setRoomRegion(item);setSelectedVenueId(null)}} aria-pressed={roomRegion===item}><MapPin size={18}/><strong>{item}</strong><span>{venues.filter((venue)=>venue.region===item).length}개 구장</span></button>)}</div><button className="primary-button sheet-cta" data-demo="room-region-next" onClick={()=>setRoomStep(2)}>이 지역 구장 보기</button></div> : null}
+
+        {roomStep === 2 ? <div className="room-step"><div className="room-step-title"><b>2</b><div><h3>{roomRegion}의 구장을 선택하세요.</h3><p>대관료와 시설 정보를 비교해 보세요.</p></div></div><div className="venue-choice-list">{roomVenues.map((venue)=><button key={venue.id} data-demo={venue.id===1?"room-venue-first":undefined} className={selectedVenueId===venue.id?"selected":""} onClick={()=>{setSelectedVenueId(venue.id);setSelectedRoomTime("")}} aria-pressed={selectedVenueId===venue.id}><span className="venue-icon"><Building2 size={22}/></span><span><strong>{venue.name}</strong><small>{venue.address}</small><small>{venue.field}</small></span><b>{venue.fee.toLocaleString()}원</b></button>)}</div><div className="room-actions"><button className="secondary-button" onClick={()=>setRoomStep(1)}>이전</button><button className="primary-button" data-demo="room-venue-next" disabled={!selectedVenueId} onClick={()=>setRoomStep(3)}>빈 시간 확인</button></div></div> : null}
+
+        {roomStep === 3 && selectedRoomVenue ? <div className="room-step"><div className="room-step-title"><b>3</b><div><h3>비어 있는 시간을 선택하세요.</h3><p>{selectedRoomVenue.name} · 9월 27일 토요일</p></div></div><div className="date-confirm"><CalendarDays size={21}/><span><small>경기 날짜</small><strong>2026년 9월 27일 (토)</strong></span><b>날짜 변경</b></div><div className="slot-grid">{selectedRoomVenue.slots.map((slot)=><button key={slot.time} data-demo={slot.time==="13:00–16:00"?"room-slot-first":undefined} disabled={!slot.available} className={selectedRoomTime===slot.time?"selected":""} onClick={()=>setSelectedRoomTime(slot.time)} aria-pressed={selectedRoomTime===slot.time}><Clock3 size={18}/><strong>{slot.time}</strong><span>{slot.available?"예약 가능":"예약 완료"}</span></button>)}</div><div className="room-actions"><button className="secondary-button" onClick={()=>setRoomStep(2)}>이전</button><button className="primary-button" data-demo="room-slot-next" disabled={!selectedRoomTime} onClick={()=>setRoomStep(4)}>이 시간 예약하기</button></div></div> : null}
+
+        {roomStep === 4 && selectedRoomVenue ? <div className="room-step"><div className="room-step-title"><b>4</b><div><h3>예약 내용을 확인하고 결제하세요.</h3><p>결제가 완료되면 모집방이 즉시 공개됩니다.</p></div></div><div className="booking-summary"><div><MapPin size={18}/><span><small>구장</small><strong>{selectedRoomVenue.name}</strong></span></div><div><CalendarDays size={18}/><span><small>일정</small><strong>9월 27일 (토) · {selectedRoomTime}</strong></span></div><div><Users size={18}/><span><small>모집 정원</small><strong>20명</strong></span></div></div><div className="payment-summary"><span>구장 예약금</span><strong>{selectedRoomVenue.fee.toLocaleString()}원</strong><small>데모에서는 실제 금액이 청구되지 않습니다.</small></div><div className="secure-payment"><ShieldCheck size={19}/><span>결제 완료 후 모집 인원과 참가비를 설정할 수 있어요.</span></div><div className="room-actions"><button className="secondary-button" onClick={()=>setRoomStep(3)}>이전</button><button className="primary-button pay-room-button" data-demo="room-pay" onClick={confirmRoomCreation}><CreditCard size={18}/>{selectedRoomVenue.fee.toLocaleString()}원 결제하고 방 만들기</button></div></div> : null}
+
+        {roomStep === 5 && createdRoom ? <div className="room-created"><div className="success-mark"><CheckCircle2 size={42}/></div><span className="badge green">모집방 생성 완료</span><h3>{createdRoom.date} 경기가 열렸어요!</h3><p>구장 예약이 확정됐습니다. 이제 함께 뛸 참가자를 모집할 수 있어요.</p><div className="created-ticket"><div><span>{createdRoom.venue.region}</span><strong>{createdRoom.venue.name}</strong><small>{createdRoom.date} · {createdRoom.time}</small></div><div><small>모집 현황</small><strong>0/{createdRoom.capacity}명</strong></div></div><button className="primary-button sheet-cta" data-demo="room-finish" onClick={()=>setRoomBuilderOpen(false)}>내 모집방 확인하기</button></div> : null}
+      </section></div> : null}
+
+      {showDemoIntro ? <div className="demo-intro-backdrop"><section className="demo-intro" role="dialog" aria-modal="true" aria-labelledby="demo-intro-title"><button className="close-button" onClick={()=>setShowDemoIntro(false)} aria-label="시연 안내 닫기"><X size={20}/></button><div className="demo-phone-icon">▶</div><p className="section-kicker">MOBILE DEMO</p><h2 id="demo-intro-title">어떤 흐름을 시연할까요?</h2><p>Windows 녹화를 시작한 뒤 원하는 시연을 고르면 커서가 직접 이동하고 클릭합니다.</p><div className="demo-choice-stack"><button className="primary-button demo-start" data-demo="demo-start" onClick={runRecordingDemo}><span>01</span><b>경기 참가 시연</b><small>포지션·장비 선택부터 MY 확인까지</small></button><button className="primary-button demo-start room-demo-start" onClick={runRoomCreationDemo}><span>02</span><b>방 만들기 시연</b><small>지역·구장·시간·결제·모집방 생성까지</small></button></div><small>각 시연은 약 20초 동안 자동으로 진행됩니다.</small></section></div>:null}
 
       {demoCursor.visible ? <div className={`demo-cursor ${demoCursor.clicking ? "clicking" : ""}`} style={{ left: demoCursor.x, top: demoCursor.y }} aria-hidden="true"><span /></div> : null}
 
