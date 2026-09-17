@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#07162c" />
+    <meta
+      name="description"
+      content="PLAY BASEBALL은 원하는 날짜와 지역, 포지션으로 생활야구 경기에 참여하고 장비 대여와 캐치볼 매칭까지 이용할 수 있는 서비스입니다."
+    />
+    <meta property="og:title" content="PLAY BASEBALL | 서비스 소개 영상" />
+    <meta
+      property="og:description"
+      content="팀을 찾지 마세요. 원하는 경기와 포지션을 고르고 바로 야구를 시작하세요."
+    />
+    <meta property="og:type" content="video.other" />
+    <meta property="og:video" content="./videos/play-baseball-promo.mp4" />
+    <meta property="og:video:type" content="video/mp4" />
+    <title>PLAY BASEBALL | 서비스 소개 영상</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --navy: #07162c;
+        --navy-soft: #10294f;
+        --orange: #f15a0a;
+        --text-soft: #cbd8eb;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: white;
+        font-family: Pretendard, "Malgun Gothic", system-ui, sans-serif;
+        background:
+          radial-gradient(circle at 50% 0%, #183b70 0%, transparent 42%),
+          var(--navy);
+      }
+
+      main {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 54px 0 64px;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 11px;
+        margin-bottom: 24px;
+        font-size: 15px;
+        font-weight: 900;
+        letter-spacing: 0.04em;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        border-radius: 12px;
+        background: var(--orange);
+        box-shadow: 0 10px 26px rgb(241 90 10 / 35%);
+      }
+
+      .brand-mark::before { content: "⚾"; font-size: 21px; }
+
+      h1 {
+        max-width: 780px;
+        margin: 0;
+        font-size: clamp(34px, 6vw, 68px);
+        line-height: 1.06;
+        letter-spacing: -0.055em;
+      }
+
+      .lead {
+        max-width: 720px;
+        margin: 20px 0 34px;
+        color: var(--text-soft);
+        font-size: clamp(16px, 2.1vw, 21px);
+        line-height: 1.7;
+      }
+
+      .player-shell {
+        overflow: hidden;
+        border: 1px solid rgb(255 255 255 / 18%);
+        border-radius: 24px;
+        background: #020914;
+        box-shadow: 0 30px 80px rgb(0 0 0 / 45%);
+      }
+
+      video {
+        display: block;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        background: #020914;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 24px;
+      }
+
+      a {
+        display: inline-flex;
+        min-height: 48px;
+        align-items: center;
+        justify-content: center;
+        padding: 0 22px;
+        border-radius: 999px;
+        color: white;
+        font-weight: 800;
+        text-decoration: none;
+      }
+
+      .primary { background: var(--orange); }
+      .secondary { border: 1px solid rgb(255 255 255 / 25%); background: rgb(255 255 255 / 7%); }
+
+      .features {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-top: 34px;
+      }
+
+      .feature {
+        padding: 20px;
+        border: 1px solid rgb(255 255 255 / 10%);
+        border-radius: 18px;
+        background: rgb(255 255 255 / 5%);
+      }
+
+      .feature strong { display: block; margin-bottom: 7px; color: #ffb283; }
+      .feature span { color: var(--text-soft); line-height: 1.5; }
+
+      @media (max-width: 760px) {
+        main { padding-top: 30px; }
+        .features { grid-template-columns: 1fr 1fr; }
+      }
+
+      @media (max-width: 470px) {
+        .features { grid-template-columns: 1fr; }
+        .actions a { width: 100%; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="brand"><span class="brand-mark" aria-hidden="true"></span>PLAY BASEBALL</div>
+      <h1>팀을 찾지 마세요.<br />경기만 고르세요.</h1>
+      <p class="lead">
+        원하는 날짜와 지역, 포지션으로 생활야구 경기에 참여하고 장비 대여부터
+        경기방 개설, 매너 리뷰, 캐치볼 약속까지 한곳에서 경험하세요.
+      </p>
+
+      <section class="player-shell" aria-label="PLAY BASEBALL 소개 영상">
+        <video controls playsinline preload="metadata">
+          <source src="./videos/play-baseball-promo.mp4" type="video/mp4" />
+          브라우저에서 영상을 재생할 수 없습니다.
+        </video>
+      </section>
+
+      <div class="actions">
+        <a class="primary" href="./">앱 체험하기</a>
+        <a class="secondary" href="./videos/play-baseball-promo.mp4" download>영상 다운로드</a>
+      </div>
+
+      <section class="features" aria-label="주요 기능">
+        <article class="feature"><strong>경기 참가</strong><span>원하는 지역·일정·포지션 선택</span></article>
+        <article class="feature"><strong>경기방 개설</strong><span>구장 시간 확인부터 참가자 모집까지</span></article>
+        <article class="feature"><strong>매너 리뷰</strong><span>결과와 MVP 확인, 안전한 경기 문화</span></article>
+        <article class="feature"><strong>캐치볼 매칭</strong><span>장소·시간·경험 수준 기반 약속</span></article>
+      </section>
+    </main>
+  </body>
+</html>
