@@ -14,8 +14,11 @@
       content="팀을 찾지 마세요. 원하는 경기와 포지션을 고르고 바로 야구를 시작하세요."
     />
     <meta property="og:type" content="video.other" />
-    <meta property="og:video" content="./videos/play-baseball-promo.mp4" />
+    <meta property="og:url" content="https://kuku98-kor.github.io/PLAY-BASEBALL/watch.html" />
+    <meta property="og:image" content="https://kuku98-kor.github.io/PLAY-BASEBALL/videos/play-baseball-poster.jpg" />
+    <meta property="og:video" content="https://kuku98-kor.github.io/PLAY-BASEBALL/videos/play-baseball-promo.mp4" />
     <meta property="og:video:type" content="video/mp4" />
+    <link rel="canonical" href="https://kuku98-kor.github.io/PLAY-BASEBALL/watch.html" />
     <title>PLAY BASEBALL | 서비스 소개 영상</title>
     <style>
       :root {
@@ -119,6 +122,30 @@
       .primary { background: var(--orange); }
       .secondary { border: 1px solid rgb(255 255 255 / 25%); background: rgb(255 255 255 / 7%); }
 
+      button.secondary {
+        min-height: 48px;
+        padding: 0 22px;
+        border-radius: 999px;
+        color: white;
+        font: inherit;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      a:focus-visible,
+      button:focus-visible,
+      video:focus-visible {
+        outline: 3px solid #ffb283;
+        outline-offset: 4px;
+      }
+
+      .share-status {
+        min-height: 24px;
+        margin: 10px 4px 0;
+        color: var(--text-soft);
+        font-size: 14px;
+      }
+
       .features {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
@@ -135,6 +162,17 @@
 
       .feature strong { display: block; margin-bottom: 7px; color: #ffb283; }
       .feature span { color: var(--text-soft); line-height: 1.5; }
+
+      .chapters {
+        margin-top: 34px;
+        padding: 26px;
+        border-left: 4px solid var(--orange);
+        background: rgb(255 255 255 / 5%);
+      }
+
+      .chapters h2 { margin: 0 0 16px; font-size: 22px; }
+      .chapters ol { display: grid; gap: 10px; margin: 0; padding-left: 22px; color: var(--text-soft); }
+      .chapters time { display: inline-block; min-width: 54px; color: #ffb283; font-weight: 800; }
 
       @media (max-width: 760px) {
         main { padding-top: 30px; }
@@ -157,8 +195,21 @@
       </p>
 
       <section class="player-shell" aria-label="PLAY BASEBALL 소개 영상">
-        <video controls playsinline preload="metadata">
+        <video
+          controls
+          playsinline
+          preload="metadata"
+          poster="./videos/play-baseball-poster.jpg"
+          aria-label="PLAY BASEBALL 공모전 소개 영상"
+        >
           <source src="./videos/play-baseball-promo.mp4" type="video/mp4" />
+          <track
+            default
+            kind="chapters"
+            src="./videos/play-baseball-chapters.vtt"
+            srclang="ko"
+            label="주요 기능"
+          />
           브라우저에서 영상을 재생할 수 없습니다.
         </video>
       </section>
@@ -166,7 +217,9 @@
       <div class="actions">
         <a class="primary" href="./">앱 체험하기</a>
         <a class="secondary" href="./videos/play-baseball-promo.mp4" download>영상 다운로드</a>
+        <button class="secondary" id="share-button" type="button">소개 영상 공유하기</button>
       </div>
+      <p class="share-status" id="share-status" role="status" aria-live="polite"></p>
 
       <section class="features" aria-label="주요 기능">
         <article class="feature"><strong>경기 참가</strong><span>원하는 지역·일정·포지션 선택</span></article>
@@ -174,6 +227,44 @@
         <article class="feature"><strong>매너 리뷰</strong><span>결과와 MVP 확인, 안전한 경기 문화</span></article>
         <article class="feature"><strong>캐치볼 매칭</strong><span>장소·시간·경험 수준 기반 약속</span></article>
       </section>
+
+      <section class="chapters" aria-labelledby="chapters-title">
+        <h2 id="chapters-title">영상에서 확인할 수 있는 흐름</h2>
+        <ol>
+          <li><time datetime="PT6S">00:06</time> 원하는 경기와 포지션으로 참가</li>
+          <li><time datetime="PT36S">00:36</time> 구장을 예약하고 경기방 개설</li>
+          <li><time datetime="PT1M15S">01:15</time> 결과·MVP 확인과 매너 리뷰</li>
+          <li><time datetime="PT1M37S">01:37</time> 캐치볼 약속 생성과 참가</li>
+        </ol>
+      </section>
     </main>
+
+    <script>
+      const shareButton = document.querySelector("#share-button");
+      const shareStatus = document.querySelector("#share-status");
+
+      shareButton.addEventListener("click", async () => {
+        const shareData = {
+          title: "PLAY BASEBALL 소개 영상",
+          text: "원하는 날, 원하는 포지션으로 시작하는 생활야구 플랫폼",
+          url: window.location.href,
+        };
+
+        try {
+          if (navigator.share) {
+            await navigator.share(shareData);
+            shareStatus.textContent = "공유 창을 열었습니다.";
+            return;
+          }
+
+          await navigator.clipboard.writeText(window.location.href);
+          shareStatus.textContent = "소개 영상 링크를 복사했습니다.";
+        } catch (error) {
+          if (error?.name !== "AbortError") {
+            shareStatus.textContent = "주소창의 링크를 복사해 공유해 주세요.";
+          }
+        }
+      });
+    </script>
   </body>
 </html>
